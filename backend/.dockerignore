@@ -1,0 +1,38 @@
+# Ignore build artifacts
+bin/
+*.log
+
+# Ignore temporary files
+/tmp/
+*.tmp
+
+# Ignore development files
+.env
+.env.local
+.env.development
+
+# Ignore version control
+.git
+.gitignore
+
+# Ignore documentation
+README.md
+*.md
+
+# Ignore test files
+*_test.go
+test/
+
+# Ignore uploads directory (will be created in container)
+uploads/
+
+# Ignore node modules if any
+node_modules/
+
+# Ignore IDE files
+.vscode/
+.idea/
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
