@@ -1,0 +1,36 @@
+# Docker Compose override for development
+# This file extends docker-compose.yml for local development
+# Copy this file to docker-compose.override.yml and set your environment variables
+version: '3.8'
+
+services:
+  backend:
+    environment:
+      # Development environment
+      ENVIRONMENT: development
+      # Enable debug logging
+      LOG_LEVEL: debug
+      # OpenAI API Key for enhanced queries (set via environment variable)
+      LLM_API_KEY: ${LLM_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    volumes:
+      # Mount source code for development (optional - comment out for production build)
+      # - .:/app
+      # Mount uploads directory to host for persistence during development
+      - ./uploads:/root/uploads
+    # Enable hot reload in development (requires air or similar tool)
+    # command: air -c .air.toml
+    
+  postgres:
+    # Add port mapping for direct database access in development
+    ports:
+      - "5432:5432"
+    # Add volume mount for SQL scripts
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts:/docker-entrypoint-initdb.d
+      
+  redis:
+    # Add port mapping for direct Redis access in development
+    ports:
+      - "6379:6379"
