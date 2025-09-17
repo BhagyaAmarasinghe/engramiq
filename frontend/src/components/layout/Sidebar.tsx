@@ -4,11 +4,15 @@ import { useState } from 'react';
 import {
   Button,
   Divider,
-  Chip,
   Card,
   CardBody,
-  Avatar
+  Avatar,
+  Listbox,
+  ListboxItem,
+  ListboxSection,
+  cn
 } from '@heroui/react';
+import {Chip} from '@heroui/chip';
 import {
   IconDashboard,
   IconFileText,
@@ -24,7 +28,6 @@ import {
   IconUser
 } from '@tabler/icons-react';
 import { EngramIQLogo } from '@/components/ui/EngramIQLogo';
-import { cn } from '@/lib/utils';
 
 interface SidebarProps {
   activeTab: string;
@@ -107,8 +110,8 @@ export function Sidebar({ activeTab, onTabChange, className }: SidebarProps) {
       {/* Header */}
       <div className="p-4 border-b border-default-200">
         <div className="flex items-center justify-between">
-          <EngramIQLogo 
-            size={collapsed ? 'sm' : 'md'} 
+          <EngramIQLogo
+            size={collapsed ? 'sm' : 'md'}
             showText={!collapsed}
             variant="white"
           />
@@ -141,110 +144,198 @@ export function Sidebar({ activeTab, onTabChange, className }: SidebarProps) {
                   <h3 className="text-sm font-medium text-white truncate">Site S2367</h3>
                   <p className="text-xs text-default-400">2,850 kW • 36 Inverters</p>
                 </div>
-                <Chip size="sm" color="success" variant="flat">Online</Chip>
+                <Chip
+                  size="sm"
+                  color="success"
+                  variant="flat"
+                  startContent={
+                    <div className="w-2 h-2 bg-success rounded-full animate-pulse" />
+                  }
+                >
+                  Online
+                </Chip>
               </div>
             </CardBody>
           </Card>
         </div>
       )}
 
-      {/* Navigation */}
-      <nav className="flex-1 p-2 space-y-1">
-        {navigationItems.map((item) => (
-          <NavigationButton
-            key={item.id}
-            item={item}
-            isActive={activeTab === item.id}
-            collapsed={collapsed}
-            onClick={() => onTabChange(item.id)}
-          />
-        ))}
-      </nav>
+      {/* Navigation with HeroUI Listbox */}
+      {!collapsed && (
+        <div className="flex-1 p-4">
+          <Listbox
+            aria-label="Navigation Menu"
+            className="p-0 gap-0 bg-transparent"
+            selectedKeys={new Set([activeTab])}
+            selectionMode="single"
+            onSelectionChange={(keys) => {
+              const selectedKey = Array.from(keys)[0];
+              if (selectedKey) {
+                onTabChange(selectedKey as string);
+              }
+            }}
+            itemClasses={{
+              base: "px-3 first:rounded-t-medium last:rounded-b-medium rounded-medium gap-3 h-12 data-[hover=true]:bg-white/5 data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary mb-1",
+            }}
+          >
+            <ListboxSection title="Main Navigation" showDivider>
+              <ListboxItem
+                key="overview"
+                description="Site overview and key metrics"
+                startContent={
+                  <div className={cn("flex items-center justify-center w-8 h-8 rounded-lg",
+                    activeTab === 'overview' ? 'bg-primary/20 text-primary' : 'bg-white/10 text-white')}>
+                    <IconDashboard className="w-4 h-4" />
+                  </div>
+                }
+              >
+                Overview
+              </ListboxItem>
+              <ListboxItem
+                key="query"
+                description="Natural language queries"
+                startContent={
+                  <div className={cn("flex items-center justify-center w-8 h-8 rounded-lg",
+                    activeTab === 'query' ? 'bg-primary/20 text-primary' : 'bg-white/10 text-white')}>
+                    <IconMessageCircle className="w-4 h-4" />
+                  </div>
+                }
+              >
+                Ask EngramIQ
+              </ListboxItem>
+              <ListboxItem
+                key="documents"
+                description="Upload and manage site documents"
+                endContent={
+                  <Chip
+                    size="sm"
+                    color="primary"
+                    variant="flat"
+                    startContent={
+                      <div className="w-1.5 h-1.5 bg-primary rounded-full" />
+                    }
+                  >
+                    New
+                  </Chip>
+                }
+                startContent={
+                  <div className={cn("flex items-center justify-center w-8 h-8 rounded-lg",
+                    activeTab === 'documents' ? 'bg-primary/20 text-primary' : 'bg-white/10 text-white')}>
+                    <IconFileText className="w-4 h-4" />
+                  </div>
+                }
+              >
+                Documents
+              </ListboxItem>
+              <ListboxItem
+                key="components"
+                description="Solar equipment and status"
+                startContent={
+                  <div className={cn("flex items-center justify-center w-8 h-8 rounded-lg",
+                    activeTab === 'components' ? 'bg-primary/20 text-primary' : 'bg-white/10 text-white')}>
+                    <IconSolarPanel className="w-4 h-4" />
+                  </div>
+                }
+              >
+                Components
+              </ListboxItem>
+              <ListboxItem
+                key="timeline"
+                description="Maintenance and event history"
+                startContent={
+                  <div className={cn("flex items-center justify-center w-8 h-8 rounded-lg",
+                    activeTab === 'timeline' ? 'bg-primary/20 text-primary' : 'bg-white/10 text-white')}>
+                    <IconCalendarTime className="w-4 h-4" />
+                  </div>
+                }
+              >
+                Timeline
+              </ListboxItem>
+              <ListboxItem
+                key="actions"
+                description="Maintenance and repair activities"
+                startContent={
+                  <div className={cn("flex items-center justify-center w-8 h-8 rounded-lg",
+                    activeTab === 'actions' ? 'bg-primary/20 text-primary' : 'bg-white/10 text-white')}>
+                    <IconTool className="w-4 h-4" />
+                  </div>
+                }
+              >
+                Actions
+              </ListboxItem>
+              <ListboxItem
+                key="search"
+                description="Advanced search capabilities"
+                startContent={
+                  <div className={cn("flex items-center justify-center w-8 h-8 rounded-lg",
+                    activeTab === 'search' ? 'bg-primary/20 text-primary' : 'bg-white/10 text-white')}>
+                    <IconSearch className="w-4 h-4" />
+                  </div>
+                }
+              >
+                Search
+              </ListboxItem>
+            </ListboxSection>
 
-      {/* Bottom Section */}
-      <div className="border-t border-default-200 p-2 space-y-1">
-        {bottomItems.map((item) => (
-          <NavigationButton
-            key={item.id}
-            item={item}
-            isActive={activeTab === item.id}
-            collapsed={collapsed}
-            onClick={() => onTabChange(item.id)}
-          />
-        ))}
-        
-        <Divider />
-        
-        {/* User Profile */}
+            <ListboxSection title="System">
+              <ListboxItem
+                key="settings"
+                description="App settings and preferences"
+                startContent={
+                  <div className={cn("flex items-center justify-center w-8 h-8 rounded-lg",
+                    activeTab === 'settings' ? 'bg-primary/20 text-primary' : 'bg-white/10 text-white')}>
+                    <IconSettings className="w-4 h-4" />
+                  </div>
+                }
+              >
+                Settings
+              </ListboxItem>
+            </ListboxSection>
+          </Listbox>
+        </div>
+      )}
+
+      {/* Collapsed Navigation */}
+      {collapsed && (
+        <nav className="flex-1 p-2 space-y-2">
+          {[...navigationItems, ...bottomItems].map((item) => (
+            <Button
+              key={item.id}
+              isIconOnly
+              variant="light"
+              className={cn(
+                'w-full h-12 text-white/80 hover:text-white hover:bg-white/5',
+                activeTab === item.id && 'bg-primary/20 text-primary'
+              )}
+              onClick={() => onTabChange(item.id)}
+            >
+              {item.icon}
+            </Button>
+          ))}
+        </nav>
+      )}
+
+      {/* User Profile */}
+      <div className="border-t border-default-200 p-4">
         <div className={cn(
-          'p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer',
-          collapsed ? 'justify-center' : ''
+          'flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors cursor-pointer',
+          collapsed && 'justify-center'
         )}>
-          <div className="flex items-center gap-3">
-            <Avatar
-              name="User"
-              size="sm"
-              className="bg-primary text-white"
-              icon={<IconUser className="w-4 h-4" />}
-            />
-            {!collapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white">Site Manager</p>
-                <p className="text-xs text-default-400 truncate">user@engramiq.com</p>
-              </div>
-            )}
-          </div>
+          <Avatar
+            name="User"
+            size="sm"
+            className="bg-primary text-white"
+            icon={<IconUser className="w-4 h-4" />}
+          />
+          {!collapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white">Site Manager</p>
+              <p className="text-xs text-default-400 truncate">user@engramiq.com</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function NavigationButton({ 
-  item, 
-  isActive, 
-  collapsed, 
-  onClick 
-}: { 
-  item: NavigationItem;
-  isActive: boolean;
-  collapsed: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      className={cn(
-        'w-full justify-start gap-3 h-auto p-3 font-normal transition-all duration-200',
-        collapsed ? 'min-w-0 px-2' : '',
-        isActive 
-          ? 'bg-primary/20 text-primary border-primary/30' 
-          : 'text-white/80 hover:text-white hover:bg-white/5'
-      )}
-      variant={isActive ? 'flat' : 'light'}
-      onClick={onClick}
-      startContent={collapsed ? undefined : item.icon}
-    >
-      {collapsed ? (
-        <div className="flex justify-center">
-          {item.icon}
-        </div>
-      ) : (
-        <>
-          <div className="flex-1 text-left">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">{item.label}</span>
-              {item.badge && (
-                <Chip size="sm" color="primary" variant="flat">
-                  {item.badge}
-                </Chip>
-              )}
-            </div>
-            {item.description && (
-              <p className="text-xs text-default-400 mt-0.5">{item.description}</p>
-            )}
-          </div>
-        </>
-      )}
-    </Button>
-  );
-}

@@ -5,11 +5,15 @@ import {
   Card,
   CardHeader,
   CardBody,
+  CardFooter,
   Progress,
-  Chip,
   Button,
-  Skeleton
+  Skeleton,
+  Divider,
+  Avatar,
+  Spacer
 } from '@heroui/react';
+import {Chip} from '@heroui/chip';
 import {
   IconSolarPanel,
   IconActivity,
@@ -46,47 +50,53 @@ interface StatsCardProps {
 
 function StatsCard({ title, value, subtitle, icon, color = 'primary', trend }: StatsCardProps) {
   return (
-    <Card className="glass-effect">
+    <Card className="glass-effect min-w-[280px] flex-1">
       <CardBody className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <div className={cn(
-                'p-2 rounded-lg',
-                color === 'primary' && 'bg-primary/10 text-primary',
-                color === 'success' && 'bg-success/10 text-success',
-                color === 'warning' && 'bg-warning/10 text-warning',
-                color === 'danger' && 'bg-danger/10 text-danger',
-                color === 'default' && 'bg-default/10 text-default-500'
-              )}>
-                {icon}
-              </div>
-              <h3 className="text-default-600 text-sm font-medium">{title}</h3>
+        {/* Header with icon and title */}
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              'flex items-center justify-center w-12 h-12 rounded-xl',
+              color === 'primary' && 'bg-primary/15 text-primary',
+              color === 'success' && 'bg-success/15 text-success',
+              color === 'warning' && 'bg-warning/15 text-warning',
+              color === 'danger' && 'bg-danger/15 text-danger',
+              color === 'default' && 'bg-default/15 text-default-500'
+            )}>
+              {icon}
             </div>
-            
-            <div className="space-y-1">
-              <p className="text-2xl font-bold text-white">{value}</p>
-              {subtitle && (
-                <p className="text-default-400 text-sm">{subtitle}</p>
-              )}
-              {trend && (
-                <div className="flex items-center gap-1">
-                  <IconTrendingUp className={cn(
-                    'w-4 h-4',
-                    trend.isPositive ? 'text-success rotate-0' : 'text-danger rotate-180'
-                  )} />
-                  <span className={cn(
-                    'text-sm font-medium',
-                    trend.isPositive ? 'text-success' : 'text-danger'
-                  )}>
-                    {Math.abs(trend.value)}%
-                  </span>
-                  <span className="text-default-400 text-sm">vs last month</span>
-                </div>
-              )}
+            <div>
+              <h3 className="text-sm font-medium text-default-500 uppercase tracking-wide">{title}</h3>
             </div>
           </div>
         </div>
+
+        {/* Main value */}
+        <div className="mb-4">
+          <div className="text-3xl font-bold text-white mb-1">{value}</div>
+          {subtitle && (
+            <p className="text-sm text-default-400">{subtitle}</p>
+          )}
+        </div>
+
+        {/* Trend indicator */}
+        {trend && (
+          <div className="flex items-center gap-2 pt-3 border-t border-default-200/30">
+            <div className="flex items-center gap-1">
+              <IconTrendingUp className={cn(
+                'w-4 h-4',
+                trend.isPositive ? 'text-success rotate-0' : 'text-danger rotate-180'
+              )} />
+              <span className={cn(
+                'text-sm font-semibold',
+                trend.isPositive ? 'text-success' : 'text-danger'
+              )}>
+                {Math.abs(trend.value)}%
+              </span>
+            </div>
+            <span className="text-sm text-default-400">vs last month</span>
+          </div>
+        )}
       </CardBody>
     </Card>
   );
@@ -229,18 +239,23 @@ export function SiteOverview({
           </div>
         </div>
         
-        <Chip 
-          color="success" 
-          variant="flat" 
+        <Chip
+          color="success"
+          variant="flat"
           size="lg"
-          startContent={<IconCheck className="w-4 h-4" />}
+          startContent={
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-success rounded-full animate-pulse" />
+              <IconCheck className="w-4 h-4" />
+            </div>
+          }
         >
           Online
         </Chip>
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <StatsCard
           title="System Health"
           value={`${operationalPercentage}%`}

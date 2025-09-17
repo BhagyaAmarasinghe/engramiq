@@ -225,7 +225,7 @@ export function Timeline({ events, isLoading, className }: TimelineProps) {
   const eventsPerPage = 10;
 
   const filteredEvents = useMemo(() => {
-    return events.filter(event => {
+    return (events || []).filter(event => {
       // Search filter
       if (filters.search && !event.title.toLowerCase().includes(filters.search.toLowerCase()) &&
           !event.description?.toLowerCase().includes(filters.search.toLowerCase())) {
@@ -305,7 +305,7 @@ export function Timeline({ events, isLoading, className }: TimelineProps) {
             <div className="flex items-center gap-2">
               <IconFilter className="w-5 h-5 text-default-500" />
               <span className="text-sm text-default-500">
-                {filteredEvents.length} of {events.length} events
+                {filteredEvents.length} of {(events || []).length} events
               </span>
             </div>
           </div>

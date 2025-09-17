@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 
 import { useState, useEffect } from 'react';
-import { Card, CardBody, Button, Spinner } from '@heroui/react';
+import { Card, CardBody, Button, Spinner, Spacer } from '@heroui/react';
 import { IconRefresh, IconAlertCircle } from '@tabler/icons-react';
 
 // Components
@@ -231,7 +231,7 @@ export default function HomePage() {
               <CardBody className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Recent Documents</h3>
                 <div className="space-y-3">
-                  {documents.slice(0, 5).map((doc) => (
+                  {(documents || []).slice(0, 5).map((doc) => (
                     <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg bg-default-100/5">
                       <div>
                         <p className="font-medium text-white">{doc.title}</p>
@@ -244,7 +244,7 @@ export default function HomePage() {
                       </div>
                     </div>
                   ))}
-                  {documents.length === 0 && (
+                  {(!documents || documents.length === 0) && (
                     <p className="text-center text-default-500 py-8">
                       No documents uploaded yet. Upload your first document above.
                     </p>
@@ -269,7 +269,7 @@ export default function HomePage() {
               <CardBody className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Site Components</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {components.map((component) => (
+                  {(components || []).map((component) => (
                     <Card key={component.id} className="border border-default-200">
                       <CardBody className="p-4">
                         <div className="flex items-center justify-between mb-2">
@@ -294,7 +294,7 @@ export default function HomePage() {
                       </CardBody>
                     </Card>
                   ))}
-                  {components.length === 0 && (
+                  {(!components || components.length === 0) && (
                     <div className="col-span-full text-center py-8">
                       <p className="text-default-500">No components found.</p>
                     </div>
@@ -380,13 +380,13 @@ export default function HomePage() {
 
   return (
     <div className="flex h-screen bg-primary-dark-blue">
-      <Sidebar 
-        activeTab={activeTab} 
+      <Sidebar
+        activeTab={activeTab}
         onTabChange={setActiveTab}
       />
-      
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-6 h-full">
+
+      <main className="flex-1 overflow-y-auto ml-8">
+        <div className="p-8 h-full max-w-7xl">
           {renderContent()}
         </div>
       </main>
