@@ -14,6 +14,9 @@ type SiteRepository interface {
 	Update(id uuid.UUID, updates map[string]interface{}) error
 	Delete(id uuid.UUID) error
 	GetWithDetails(id uuid.UUID) (*domain.SiteWithDetails, error)
+	// Convenience methods for API handlers
+	GetSites(page, limit int) ([]*domain.Site, int64, error)
+	GetSite(siteID string) (*domain.Site, error)
 }
 
 type siteRepository struct {
@@ -120,4 +123,29 @@ func (r *siteRepository) GetWithDetails(id uuid.UUID) (*domain.SiteWithDetails, 
 		},
 		RecentActivityCount: int(recentActivity),
 	}, nil
+}
+
+// Convenience methods for API handlers
+func (r *siteRepository) GetSites(page, limit int) ([]*domain.Site, int64, error) {
+	pagination := &domain.Pagination{
+		Page:  page,
+		Limit: limit,
+	}
+	
+	sites, err := r.List(pagination, nil)
+	if err != nil {
+		return nil, 0, err
+	}
+	
+	return sites, pagination.TotalItems, nil
+}
+
+func (r *siteRepository) GetSite(siteID string) (*domain.Site, error) {
+	// Try to parse as UUID first
+	if id, err := uuid.Parse(siteID); err == nil {
+		return r.GetByID(id)
+	}
+	
+	// If not a UUID, try as site code
+	return r.GetBySiteCode(siteID)
 }

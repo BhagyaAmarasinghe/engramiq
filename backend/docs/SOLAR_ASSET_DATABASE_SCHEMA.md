@@ -10,7 +10,7 @@ The database is built on **PostgreSQL 15** with **pgvector extension** for seman
 - **Solar Asset Management**: Sites, components, relationships, and hierarchies  
 - **Document Processing**: Field service reports with AI-powered analysis
 - **Enhanced Query System**: Natural language processing with source attribution
-- **Supporting-Documents Integration**: Pre-loaded site S2367 with 46+ SOLECTRIA inverters
+- **Supporting-Documents Integration**: Pre-loaded site S2367 with 36 total inverters (SOLECTRIA + SOLIS)
 
 ## Database Extensions
 
@@ -32,6 +32,12 @@ CREATE TABLE migration_records (
     applied_at TIMESTAMP NOT NULL       -- When migration was applied
 );
 ```
+
+**Migration Runner Features**:
+- Transaction-safe migration execution
+- Rollback capability for failed migrations
+- Duplicate migration prevention
+- Automatic schema updates via GORM AutoMigrate
 
 **Populated Data**:
 - `20240915000001`: "Populate site S2367 with inverter data" - Applied automatically on startup
@@ -64,7 +70,10 @@ CREATE UNIQUE INDEX uni_sites_site_code ON sites(site_code);
 ```
 
 **Pre-populated Data**:
-- **Site S2367**: "Combined Site - Educational Campus" with 46+ SOLECTRIA inverters from Supporting-Documents
+- **Site S2367**: "Combined Site - Educational Campus" with 36 total inverters:
+  - 18 SOLECTRIA PVI 75TL (75kW each) - Ground mount
+  - 18 SOLIS S5-GR3P15K (15kW each) - Rooftop
+  - Total capacity: 2,850 kW with complete spatial mapping
 
 ### site_components  
 Equipment components within solar installations (inverters, combiners, panels, etc.).
@@ -74,6 +83,10 @@ Equipment components within solar installations (inverters, combiners, panels, e
 CREATE TYPE component_type AS ENUM (
     'inverter', 'combiner', 'panel', 'transformer', 
     'meter', 'switchgear', 'monitoring', 'other'
+);
+
+CREATE TYPE component_status AS ENUM (
+    'operational', 'fault', 'maintenance', 'offline'
 );
 
 CREATE TABLE site_components (
@@ -103,7 +116,7 @@ CREATE TABLE site_components (
     embedding VECTOR(1536),                     -- AI embedding for semantic search
     
     -- Status tracking
-    current_status VARCHAR(50) DEFAULT 'operational',
+    current_status component_status DEFAULT 'operational',
     last_maintenance_date DATE,
     next_maintenance_date DATE,
     
@@ -122,10 +135,16 @@ CREATE INDEX idx_components_electrical_data ON site_components USING gin(electri
 ```
 
 **Pre-populated Data** (from inverter_nodes.json):
-- **46+ SOLECTRIA Inverters**: Ground mount (PVI 75TL, 75kW each) and rooftop (S5-GR3P15K, 15kW each)
+- **36 Total Inverters**: 
+  - 18 SOLECTRIA PVI 75TL (75kW each) - Ground mount
+  - 18 SOLIS S5-GR3P15K (15kW each) - Rooftop
 - **Complete Specifications**: Manufacturer, model, capacity, serial numbers
 - **Electrical Data**: Max DC/AC power, efficiency, MPPT channels, voltage ranges
 - **Physical Location**: Area (Ground/Rooftop), row/position coordinates, spatial IDs
+- **Enhanced Fields**:
+  - `external_id`: External system identifier
+  - `level`: Hierarchy level (default: 0)
+  - `group_name`: Grouping identifier for related components
 
 ### component_relationships
 Relationships between components (power flow, control, monitoring, etc.).
@@ -163,6 +182,10 @@ CREATE TYPE document_type AS ENUM (
     'contract', 'manual', 'drawing', 'other'
 );
 
+CREATE TYPE processing_status AS ENUM (
+    'pending', 'processing', 'completed', 'failed'
+);
+
 CREATE TABLE documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
@@ -177,8 +200,18 @@ CREATE TABLE documents (
     raw_content TEXT,                           -- Extracted text content
     processed_content TEXT,                     -- Cleaned/processed content
     embedding VECTOR(1536),                     -- AI embedding for semantic search
-    processing_status VARCHAR(50) DEFAULT 'pending', -- pending/processing/completed/failed
+    processing_status processing_status DEFAULT 'pending',
     processing_error TEXT,
+    processing_started_at TIMESTAMP,            -- When processing began
+    processing_completed_at TIMESTAMP,          -- When processing finished
+    
+    -- Enhanced metadata
+    source_type VARCHAR(100),                   -- Source classification
+    source_identifier VARCHAR(255),             -- External source ID
+    original_filename VARCHAR(500),             -- Original uploaded filename
+    author_name VARCHAR(255),                   -- Document author
+    author_email VARCHAR(255),                  -- Author email
+    uploaded_by UUID,                           -- User who uploaded
     
     -- Search optimization
     content_vector TSVECTOR,                    -- Full-text search vector
@@ -435,7 +468,9 @@ CREATE TABLE users (
     -- Profile
     organization VARCHAR(255),
     phone VARCHAR(50),
-    user_metadata JSONB DEFAULT '{}',
+    avatar_url VARCHAR(500),                    -- Profile image URL
+    settings JSONB DEFAULT '{}',                -- User preferences and settings
+    user_metadata JSONB DEFAULT '{}',          -- Additional metadata
     
     -- Authentication
     email_verified BOOLEAN DEFAULT FALSE,
@@ -454,65 +489,60 @@ CREATE INDEX idx_users_role ON users(role);
 CREATE INDEX idx_users_active ON users(is_active);
 ```
 
-### refresh_tokens  
-JWT refresh token management.
+### user_sessions
+Comprehensive session management with enhanced security tracking.
 
 ```sql
-CREATE TABLE refresh_tokens (
+CREATE TABLE user_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token_hash VARCHAR(255) NOT NULL,          -- Hashed refresh token
+    access_token VARCHAR(255) UNIQUE NOT NULL,  -- JWT access token
+    refresh_token VARCHAR(255) UNIQUE NOT NULL, -- JWT refresh token
+    device_info VARCHAR(500),                   -- Device fingerprinting
+    ip_address VARCHAR(45),                     -- IPv4/IPv6 support
     expires_at TIMESTAMP NOT NULL,
-    is_revoked BOOLEAN DEFAULT FALSE,
-    
-    -- Security tracking
-    issued_ip VARCHAR(45),                      -- IPv4/IPv6 support
-    user_agent TEXT,
-    
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 -- Indexes
-CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id);
-CREATE INDEX idx_refresh_tokens_hash ON refresh_tokens(token_hash);
-CREATE INDEX idx_refresh_tokens_expires ON refresh_tokens(expires_at);
+CREATE INDEX idx_user_sessions_user ON user_sessions(user_id);
+CREATE INDEX idx_user_sessions_access_token ON user_sessions(access_token);
+CREATE INDEX idx_user_sessions_refresh_token ON user_sessions(refresh_token);
+CREATE INDEX idx_user_sessions_expires ON user_sessions(expires_at);
 ```
 
 ## Analytics and Performance Tables
 
 ### query_analytics
-Query performance and usage analytics.
+Comprehensive query performance and usage analytics.
 
 ```sql
 CREATE TABLE query_analytics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    site_id UUID REFERENCES sites(id),
-    query_id UUID REFERENCES user_queries(id),
+    site_id UUID NOT NULL REFERENCES sites(id),
     user_id UUID REFERENCES users(id),
+    query_text TEXT NOT NULL,                   -- Original query for analysis
+    query_type VARCHAR(50),                     -- Categorized query type
     
     -- Performance metrics
-    processing_time_ms INTEGER NOT NULL,
-    source_retrieval_time_ms INTEGER,
-    llm_processing_time_ms INTEGER,
-    total_sources_found INTEGER,
-    sources_used INTEGER,
+    results_count INTEGER DEFAULT 0,            -- Number of results returned
+    response_generated BOOLEAN DEFAULT FALSE,   -- Whether LLM response was generated
+    execution_time_ms INTEGER,                  -- Total execution time
+    search_time_ms INTEGER,                     -- Search operation time
+    llm_time_ms INTEGER,                        -- LLM processing time
     
-    -- Quality metrics
-    confidence_score DECIMAL(3,2),
-    user_satisfaction INTEGER,                  -- 1-5 rating (future feature)
-    query_successful BOOLEAN DEFAULT TRUE,
-    
-    -- Usage patterns
-    query_category VARCHAR(100),                -- maintenance, troubleshooting, reporting
-    response_length INTEGER,                    -- Character count of response
+    -- Session tracking
+    session_id UUID NOT NULL,                   -- User session identifier
+    user_agent TEXT,                            -- Browser/client information
     
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 -- Indexes
 CREATE INDEX idx_analytics_site_date ON query_analytics(site_id, created_at);
-CREATE INDEX idx_analytics_performance ON query_analytics(processing_time_ms);
-CREATE INDEX idx_analytics_success ON query_analytics(query_successful);
+CREATE INDEX idx_analytics_performance ON query_analytics(execution_time_ms);
+CREATE INDEX idx_analytics_success ON query_analytics(response_generated);
 ```
 
 ## Database Management
@@ -527,13 +557,22 @@ SELECT * FROM migration_records ORDER BY applied_at;
 SELECT site_code, name, number_of_inverters 
 FROM sites WHERE site_code = 'S2367';
 
--- Count migrated components
+-- Count migrated components by manufacturer
 SELECT COUNT(*) as total_components, 
        specifications->>'manufacturer' as manufacturer
 FROM site_components 
 WHERE site_id = (SELECT id FROM sites WHERE site_code = 'S2367')
 GROUP BY specifications->>'manufacturer';
 ```
+
+### Production-Ready Migration System
+
+**Migration Architecture**:
+- **Custom Migration Runner**: Transaction-safe execution with rollback capability
+- **GORM AutoMigrate**: Handles table creation and schema updates automatically
+- **Enum Type Creation**: Programmatically creates PostgreSQL custom types
+- **Advanced Indexing**: Automatically creates vector similarity and JSONB indexes
+- **Database Triggers**: Sets up automatic content vector updates for full-text search
 
 ### Performance Optimization
 
@@ -575,9 +614,11 @@ GROUP BY specifications->>'manufacturer';
 The database comes pre-loaded with production-ready data:
 
 **Site S2367**: Complete solar installation with:
-- 46+ SOLECTRIA inverters with full specifications
-- Ground mount (PVI 75TL, 75kW) and rooftop (S5-GR3P15K, 15kW) systems
-- Spatial IDs, electrical data, and physical locations
+- **36 Total Inverters**: 18 SOLECTRIA PVI 75TL (ground) + 18 SOLIS S5-GR3P15K (rooftop)
+- **Multi-vendor Support**: SOLECTRIA and SOLIS manufacturers with distinct specifications
+- **Precise Spatial Mapping**: UUID-based spatial references with row/position coordinates
+- **Comprehensive Electrical Data**: AC/DC power ratings, efficiency, MPPT channels
+- **Enhanced Metadata**: External IDs, hierarchy levels, and component groupings
 
 **Field Service Reports**: Processed from Sample-Reports.pdf:
 - Inverter 40 arc protection issues

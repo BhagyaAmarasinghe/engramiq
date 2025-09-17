@@ -1,0 +1,144 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: engramiq-postgres
+    environment:
+      POSTGRES_USER: engramiq
+      POSTGRES_PASSWORD: engramiq_dev_2024
+      POSTGRES_DB: engramiq
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U engramiq -d engramiq"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - engramiq-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: engramiq-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - engramiq-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: engramiq-backend
+    environment:
+      DATABASE_URL: postgres://engramiq:engramiq_dev_2024@postgres:5432/engramiq?sslmode=disable
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_MODEL: gpt-4
+      LLM_PROVIDER: openai
+      OPENAI_API_KEY: ${LLM_API_KEY}
+      REDIS_URL: redis://redis:6379
+      PORT: 8080
+      ENVIRONMENT: development
+      CORS_ORIGINS: http://localhost:3000,http://localhost:80,http://frontend:3000
+      JWT_SECRET: ${JWT_SECRET:-engramiq-super-secret-jwt-key-2024}
+      JWT_EXPIRY: 24h
+      UPLOAD_PATH: ./uploads
+      MAX_UPLOAD_SIZE: 50MB
+    ports:
+      - "8080:8080"
+    volumes:
+      - backend_uploads:/root/uploads
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - engramiq-network
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: engramiq-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+    # No external port - accessed through nginx
+    expose:
+      - "3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - engramiq-network
+
+  # Nginx Reverse Proxy (Optional - for production-like setup)
+  nginx:
+    image: nginx:alpine
+    container_name: engramiq-nginx
+    ports:
+      - "3000:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+    networks:
+      - engramiq-network
+
+  # PgAdmin (Optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: engramiq-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@engramiq.dev
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - engramiq-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_uploads:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  engramiq-network:
+    driver: bridge

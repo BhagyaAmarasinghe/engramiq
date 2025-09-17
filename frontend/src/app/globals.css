@@ -1,0 +1,127 @@
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary-green: #17c480;
+  --color-primary-dark-blue: #0d1830;
+  --color-secondary-deep-teal: #005461;
+  --color-secondary-deep-blue: #052680;
+  --color-secondary-bright-green: #61d894;
+  --color-secondary-bright-blue: #1bdcbc;
+  --font-family-figtree: Figtree, sans-serif;
+  --font-family-aptos: Aptos, sans-serif;
+  
+  /* HeroUI Color Definitions */
+  --heroui-primary: #17c480;
+  --heroui-primary-foreground: #ffffff;
+  --heroui-secondary: #1bdcbc;
+  --heroui-secondary-foreground: #0d1830;
+  --heroui-background: #0d1830;
+  --heroui-foreground: #ffffff;
+  --heroui-default: #3f3f46;
+  --heroui-default-50: #fafafa;
+  --heroui-default-100: #f4f4f5;
+  --heroui-default-200: #e4e4e7;
+  --heroui-default-300: #d4d4d8;
+  --heroui-default-400: #a1a1aa;
+  --heroui-default-500: #71717a;
+  --heroui-default-600: #52525b;
+  --heroui-default-700: #3f3f46;
+  --heroui-default-800: #27272a;
+  --heroui-default-900: #18181b;
+  --heroui-success: #22c55e;
+  --heroui-warning: #f59e0b;
+  --heroui-danger: #ef4444;
+}
+
+:root {
+  /* EngramIQ Brand Colors */
+  --primary-green: #17c480;
+  --primary-dark-blue: #0d1830;
+  --brand-gradient: linear-gradient(135deg, #17c480 0%, #0d1830 100%);
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: 'Figtree', sans-serif;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-green);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #14b374;
+}
+
+/* Animation classes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass morphism effect */
+.glass-effect {
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  background-color: rgba(17, 25, 40, 0.25);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.125);
+}

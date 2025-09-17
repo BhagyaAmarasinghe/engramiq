@@ -108,10 +108,15 @@ func main() {
 	api := app.Group("/api/v1")
 
 	// Initialize handlers
+	siteHandler := handler.NewSiteHandler(siteRepo)
 	documentHandler := handler.NewDocumentHandler(documentService)
 	queryHandler := handler.NewQueryHandler(queryService)
 	componentHandler := handler.NewComponentHandler(componentRepo, actionRepo)
 	actionHandler := handler.NewActionHandler(actionRepo)
+
+	// Site routes
+	api.Get("/sites", siteHandler.ListSites)
+	api.Get("/sites/:id", siteHandler.GetSite)
 
 	// Document routes
 	api.Post("/sites/:siteId/documents", documentHandler.UploadDocument)
