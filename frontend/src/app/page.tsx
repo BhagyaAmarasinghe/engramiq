@@ -77,7 +77,8 @@ export default function HomePage() {
 
       // Handle components
       if (componentsRes.status === 'fulfilled') {
-        setComponents(componentsRes.value.data);
+        console.log('Components response:', componentsRes.value);
+        setComponents(componentsRes.value.data || []);
       } else {
         console.warn('Failed to load components:', componentsRes.reason);
         setComponents([]);

@@ -269,7 +269,7 @@ func (s *queryService) retrieveRelevantSources(siteID uuid.UUID, queryText strin
 		if excerpt == "" {
 			excerpt = doc.RawContent
 		}
-		
+
 		// If still empty, use title and metadata as fallback
 		if excerpt == "" {
 			excerpt = fmt.Sprintf("Document: %s (Type: %s)", doc.Title, doc.DocumentType)
@@ -280,11 +280,9 @@ func (s *queryService) retrieveRelevantSources(siteID uuid.UUID, queryText strin
 				}
 			}
 		}
-		
-		// Truncate to reasonable size
-		if len(excerpt) > 500 {
-			excerpt = excerpt[:500] + "..."
-		}
+
+		// Extract relevant chunk based on query instead of just truncating
+		excerpt = s.extractRelevantChunk(excerpt, queryText, 8000) // Increased from 500 to 8000 chars
 
 		source := domain.QuerySourceDetail{
 			DocumentID:       doc.ID,
@@ -304,10 +302,9 @@ func (s *queryService) retrieveRelevantSources(siteID uuid.UUID, queryText strin
 
 	// If we have specific component filters, also search actions
 	if len(intent.ComponentFilters) > 0 {
-		componentFilters := intent.ComponentFilters
-		// Search for relevant maintenance actions
+		// Search for relevant maintenance actions - use action_type filter instead of component_type
 		actions, err := s.actionRepo.ListBySite(siteID, &domain.Pagination{Limit: 5}, map[string]interface{}{
-			"component_type": componentFilters[0],
+			"action_type": "maintenance",
 		})
 		if err == nil {
 			for _, action := range actions {
@@ -584,4 +581,107 @@ func convertToJSON(entities map[string][]string) domain.JSON {
 		result[key] = values
 	}
 	return result
+}
+
+// extractRelevantChunk intelligently extracts the most relevant portion of a document
+// based on the query, rather than just truncating
+func (s *queryService) extractRelevantChunk(content, query string, maxChars int) string {
+	if len(content) <= maxChars {
+		return content
+	}
+
+	// Convert to lowercase for better matching
+	lowercaseQuery := strings.ToLower(query)
+
+	// Extract key terms from the query
+	queryTerms := []string{}
+
+	// Look for specific component references (inverter numbers, etc.)
+	if strings.Contains(lowercaseQuery, "inverter") {
+		// Extract inverter numbers like "31", "40", "16", etc.
+		words := strings.Fields(lowercaseQuery)
+		for _, word := range words {
+			// Match patterns like "31", "inv-31", "inverter 31", etc.
+			if regexp.MustCompile(`\d+`).MatchString(word) {
+				queryTerms = append(queryTerms, word)
+				queryTerms = append(queryTerms, "inv-"+word)
+				queryTerms = append(queryTerms, "inverter "+word)
+			}
+		}
+	}
+
+	// Add technician references
+	if strings.Contains(lowercaseQuery, "technician") {
+		words := strings.Fields(lowercaseQuery)
+		for i, word := range words {
+			if word == "technician" && i+1 < len(words) {
+				queryTerms = append(queryTerms, "technician "+words[i+1])
+			}
+		}
+	}
+
+	// Add date references
+	if strings.Contains(lowercaseQuery, "/") || strings.Contains(lowercaseQuery, "-") {
+		words := strings.Fields(lowercaseQuery)
+		for _, word := range words {
+			if regexp.MustCompile(`\d+[/-]\d+[/-]?\d*`).MatchString(word) {
+				queryTerms = append(queryTerms, word)
+			}
+		}
+	}
+
+	// Generic important terms
+	importantTerms := []string{"maintenance", "repair", "replace", "install", "issue", "problem", "fault", "work"}
+	for _, term := range importantTerms {
+		if strings.Contains(lowercaseQuery, term) {
+			queryTerms = append(queryTerms, term)
+		}
+	}
+
+	// Find the best starting position based on query term matches
+	bestScore := 0
+	bestStart := 0
+	windowSize := maxChars
+
+	// Slide a window through the content and score each position
+	for i := 0; i+windowSize < len(content); i += 500 { // Step by 500 chars
+		score := 0
+		window := strings.ToLower(content[i : i+windowSize])
+
+		// Score based on query term matches
+		for _, term := range queryTerms {
+			matches := strings.Count(window, term)
+			score += matches * 10 // Weight query terms heavily
+		}
+
+		// Bonus for being near the beginning
+		if i < len(content)/4 {
+			score += 2
+		}
+
+		if score > bestScore {
+			bestScore = score
+			bestStart = i
+		}
+	}
+
+	// Extract the chunk
+	end := bestStart + windowSize
+	if end > len(content) {
+		end = len(content)
+	}
+
+	chunk := content[bestStart:end]
+
+	// If we don't start at the beginning, add some context
+	if bestStart > 0 {
+		chunk = "..." + chunk
+	}
+
+	// If we don't end at the end, indicate truncation
+	if end < len(content) {
+		chunk = chunk + "..."
+	}
+
+	return chunk
 }

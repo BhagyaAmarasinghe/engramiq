@@ -257,8 +257,18 @@ export function QueryInterface({
 
                   {/* Message Actions */}
                   {!message.isLoading && !message.error && (
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-default-200">
-                      <span className="text-xs text-default-400">
+                    <div className={cn(
+                      "flex items-center justify-between mt-3 pt-3 border-t",
+                      message.type === 'user'
+                        ? "border-blue-200/30"
+                        : "border-default-200"
+                    )}>
+                      <span className={cn(
+                        "text-xs font-medium",
+                        message.type === 'user'
+                          ? "text-blue-100/80"
+                          : "text-default-500"
+                      )}>
                         {formatDateTime(message.timestamp)}
                       </span>
                       <div className="flex items-center gap-1">
@@ -353,10 +363,10 @@ function SourceCard({ source, index }: { source: SourceAttribution; index: numbe
                 !isExpanded && 'line-clamp-2'
               )}
             >
-              {source.relevantExcerpt}
+              {source.relevantExcerpt || 'No excerpt available'}
             </div>
             
-            {source.relevantExcerpt.length > 100 && (
+            {source.relevantExcerpt && source.relevantExcerpt.length > 100 && (
               <Button
                 size="sm"
                 variant="light"

@@ -33,13 +33,17 @@ interface DocumentUploadProps {
   className?: string;
 }
 
-interface UploadFile extends File {
+interface UploadFile {
   id: string;
   progress: number;
   status: 'pending' | 'uploading' | 'completed' | 'error';
   error?: string;
   documentType?: DocumentType;
   metadata?: Record<string, any>;
+  file: File;
+  name: string;
+  size: number;
+  type: string;
 }
 
 const documentTypeOptions = [
@@ -86,11 +90,15 @@ export function DocumentUpload({
 
     // Add accepted files
     const newFiles: UploadFile[] = acceptedFiles.map((file) => ({
-      ...file,
       id: Math.random().toString(36).substring(2),
       progress: 0,
       status: 'pending' as const,
       documentType: 'other' as DocumentType,
+      file: file,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      metadata: {}
     }));
 
     setFiles(prev => [...prev, ...newFiles]);
@@ -100,10 +108,13 @@ export function DocumentUpload({
     onDrop,
     maxFiles,
     maxSize,
-    accept: acceptedTypes.reduce((acc, type) => {
-      acc[`application/${type.replace('.', '')}`] = [type];
-      return acc;
-    }, {} as Record<string, string[]>),
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'text/plain': ['.txt'],
+      'message/rfc822': ['.eml']
+    },
     disabled: isUploading,
   });
 
@@ -133,35 +144,51 @@ export function DocumentUpload({
       
       try {
         // Update status to uploading
-        setFiles(prev => prev.map(f => 
+        setFiles(prev => prev.map(f =>
           f.id === file.id ? { ...f, status: 'uploading' as const } : f
         ));
 
-        // Simulate upload progress (replace with actual API call)
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('document_type', file.documentType || 'other');
-        
-        if (file.metadata) {
-          Object.entries(file.metadata).forEach(([key, value]) => {
-            formData.append(key, JSON.stringify(value));
-          });
-        }
-
-        // Progress simulation (replace with actual upload)
-        for (let progress = 0; progress <= 100; progress += 10) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          setFiles(prev => prev.map(f => 
-            f.id === file.id ? { ...f, progress } : f
+        // Ensure documentType is set
+        if (!file.documentType) {
+          setFiles(prev => prev.map(f =>
+            f.id === file.id ? { ...f, documentType: 'other' as DocumentType } : f
           ));
         }
 
+        // Import the documentAPI from lib/api
+        const { documentAPI } = await import('@/lib/api');
+
+        // Get the current file data (it might have been updated)
+        const currentFile = files.find(f => f.id === file.id);
+        if (!currentFile) {
+          throw new Error('File not found');
+        }
+
+        // Debug logging
+        console.log('Uploading file:', {
+          name: currentFile.name,
+          size: currentFile.size,
+          type: currentFile.type,
+          documentType: currentFile.documentType,
+          metadata: currentFile.metadata
+        });
+
+        // Upload the document
+        const response = await documentAPI.uploadDocument(
+          siteId,
+          currentFile.file,
+          currentFile.documentType || 'other',
+          currentFile.metadata
+        );
+
+        console.log('Upload successful:', response);
+
         // Mark as completed
-        setFiles(prev => prev.map(f => 
+        setFiles(prev => prev.map(f =>
           f.id === file.id ? { ...f, status: 'completed' as const, progress: 100 } : f
         ));
 
-        onUploadComplete?.(file);
+        onUploadComplete?.(response.data);
         
       } catch (error: any) {
         setFiles(prev => prev.map(f => 

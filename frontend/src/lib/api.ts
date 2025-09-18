@@ -10,21 +10,24 @@ import {
 } from '@/types';
 import { toCamelCase } from '@/lib/utils';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export const api = axios.create({
   baseURL: `${API_BASE_URL}/api/v1`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
-// Request interceptor for auth tokens (when implemented)
+// Request interceptor for auth tokens and content type
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Set Content-Type to application/json only if it's not FormData
+  if (!(config.data instanceof FormData)) {
+    config.headers['Content-Type'] = 'application/json';
+  }
+
   return config;
 });
 
@@ -68,7 +71,36 @@ export const siteAPI = {
 export const componentAPI = {
   getComponents: async (siteId: string, params?: Record<string, any>): Promise<{ data: Component[] }> => {
     const response = await api.get(`/sites/${siteId}/components`, { params });
-    return response.data;
+    // Backend returns { components: [...] }, but we need { data: [...] }
+    const components = response.data.components || [];
+
+    // Convert snake_case to camelCase for each component
+    const transformedComponents = components.map((comp: any) => ({
+      id: comp.id,
+      siteId: comp.site_id,
+      externalId: comp.external_id,
+      componentType: comp.component_type,
+      name: comp.name,
+      label: comp.label,
+      level: comp.level,
+      groupName: comp.group_name,
+      specifications: comp.specifications,
+      electricalData: comp.electrical_data,
+      physicalData: comp.physical_data,
+      drawingTitle: comp.drawing_title,
+      drawingNumber: comp.drawing_number,
+      revision: comp.revision,
+      revisionDate: comp.revision_date,
+      spatialId: comp.spatial_id,
+      coordinates: comp.coordinates,
+      currentStatus: comp.current_status,
+      lastMaintenanceDate: comp.last_maintenance_date,
+      nextMaintenanceDate: comp.next_maintenance_date,
+      createdAt: comp.created_at,
+      updatedAt: comp.updated_at
+    }));
+
+    return { data: transformedComponents };
   },
   
   getComponent: (componentId: string): Promise<{ data: Component }> => 
@@ -91,7 +123,38 @@ export const componentAPI = {
 export const documentAPI = {
   getDocuments: async (siteId: string, params?: Record<string, any>): Promise<{ data: Document[] }> => {
     const response = await api.get(`/sites/${siteId}/documents`, { params });
-    return response.data;
+    // Backend returns { documents: [...] }, but we need { data: [...] }
+    const documents = response.data.documents || [];
+
+    // Convert snake_case to camelCase for each document
+    const transformedDocuments = documents.map((doc: any) => ({
+      id: doc.id,
+      siteId: doc.site_id,
+      title: doc.title,
+      documentType: doc.document_type,
+      filePath: doc.file_path,
+      fileSize: doc.file_size,
+      fileHash: doc.file_hash,
+      mimeType: doc.mime_type,
+      rawContent: doc.raw_content,
+      processedContent: doc.processed_content,
+      processingStatus: doc.processing_status,
+      processingError: doc.processing_error,
+      processingStartedAt: doc.processing_started_at,
+      processingCompletedAt: doc.processing_completed_at,
+      sourceType: doc.source_type,
+      sourceIdentifier: doc.source_identifier,
+      originalFilename: doc.original_filename,
+      authorName: doc.author_name,
+      authorEmail: doc.author_email,
+      uploadedBy: doc.uploaded_by,
+      documentMetadata: doc.document_metadata,
+      uploadUserId: doc.upload_user_id,
+      createdAt: doc.created_at,
+      updatedAt: doc.updated_at
+    }));
+
+    return { data: transformedDocuments };
   },
   
   getDocument: (documentId: string): Promise<{ data: Document }> => 
@@ -106,12 +169,9 @@ export const documentAPI = {
         formData.append(key, JSON.stringify(value));
       });
     }
-    
-    return api.post(`/sites/${siteId}/documents`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+
+    // Don't set Content-Type header, let the browser set it with boundary
+    return api.post(`/sites/${siteId}/documents`, formData);
   },
   
   processDocument: (documentId: string): Promise<{ data: Document }> => 
@@ -174,7 +234,8 @@ export const timelineAPI = {
     limit?: number;
   }): Promise<{ data: TimelineEvent[] }> => {
     const response = await api.get(`/sites/${siteId}/timeline`, { params });
-    return response.data;
+    // Backend returns { actions: [...] }, but we need { data: [...] }
+    return { data: response.data.actions || [] };
   },
 };
 

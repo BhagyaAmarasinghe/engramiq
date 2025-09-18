@@ -1,17 +1,20 @@
 package service
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/engramiq/engramiq-backend/internal/domain"
 	"github.com/engramiq/engramiq-backend/internal/repository"
 	"github.com/google/uuid"
+	"github.com/ledongthuc/pdf"
 	"github.com/pgvector/pgvector-go"
 )
 
@@ -82,6 +85,17 @@ func (s *documentService) UploadDocument(siteID uuid.UUID, file *multipart.FileH
 		return nil, fmt.Errorf("failed to extract text content: %w", err)
 	}
 
+	// Determine what to store as raw content based on file type
+	var rawContent string
+	fileExt := filepath.Ext(file.Filename)
+	if fileExt == ".pdf" || fileExt == ".docx" || fileExt == ".doc" {
+		// For binary files, don't store raw content to avoid UTF-8 encoding issues
+		rawContent = ""
+	} else {
+		// For text files, store the original content
+		rawContent = string(content)
+	}
+
 	// Create document record
 	document := &domain.Document{
 		ID:               uuid.New(),
@@ -92,7 +106,7 @@ func (s *documentService) UploadDocument(siteID uuid.UUID, file *multipart.FileH
 		FileSize:        file.Size,
 		MimeType:        file.Header.Get("Content-Type"),
 		DocumentType:    documentType,
-		RawContent:      string(content), // Store original file content
+		RawContent:      rawContent,
 		ProcessedContent: textContent,
 		ProcessingStatus: domain.ProcessingStatusPending,
 		DocumentMetadata: domain.JSON{}, // Initialize empty JSON
@@ -206,15 +220,63 @@ func (s *documentService) extractTextContent(content []byte, fileExt string) (st
 	case ".txt":
 		return string(content), nil
 	case ".pdf":
-		// TODO: Implement PDF text extraction using a library like pdfcpu or unipdf
-		return string(content), nil // Placeholder
+		// Try to extract PDF text, but don't fail if it can't be parsed
+		extracted, err := s.extractPDFText(content)
+		if err != nil {
+			// If PDF extraction fails, return a safe placeholder
+			return "[PDF content - text extraction failed: " + err.Error() + "]", nil
+		}
+		return extracted, nil
 	case ".docx", ".doc":
 		// TODO: Implement Word document text extraction
-		return string(content), nil // Placeholder
+		// For now, return empty string for binary Word documents to avoid encoding issues
+		return "", fmt.Errorf("Word document text extraction not implemented yet")
 	default:
-		// For unknown types, try to extract as plain text
+		// For unknown types, check if content is valid UTF-8
+		if strings.ToValidUTF8(string(content), "") != string(content) {
+			return "", fmt.Errorf("file contains binary content that cannot be processed as text")
+		}
 		return string(content), nil
 	}
+}
+
+func (s *documentService) extractPDFText(content []byte) (string, error) {
+	// Create a reader from the byte slice
+	reader := bytes.NewReader(content)
+
+	// Create a PDF reader
+	pdfReader, err := pdf.NewReader(reader, int64(len(content)))
+	if err != nil {
+		return "", fmt.Errorf("failed to create PDF reader: %w", err)
+	}
+
+	var textContent strings.Builder
+
+	// Extract text from each page
+	for pageNum := 1; pageNum <= pdfReader.NumPage(); pageNum++ {
+		page := pdfReader.Page(pageNum)
+		if page.V.IsNull() {
+			continue
+		}
+
+		// Get page content - pass an empty font map since we just want text
+		pageText, err := page.GetPlainText(map[string]*pdf.Font{})
+		if err != nil {
+			// If we can't extract text from this page, continue with others
+			continue
+		}
+
+		textContent.WriteString(pageText)
+		textContent.WriteString("\n\n") // Add spacing between pages
+	}
+
+	extracted := strings.TrimSpace(textContent.String())
+	if extracted == "" {
+		// Return a placeholder instead of error to avoid UTF-8 issues
+		return "[PDF content - text extraction failed]", nil
+	}
+
+	return extracted, nil
 }
 
 func (s *documentService) extractDateFromFilename(filename string) time.Time {
