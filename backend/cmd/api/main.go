@@ -68,7 +68,7 @@ func main() {
 	contentFilterService := service.NewContentFilterService()
 	sourceAttributionService := service.NewSourceAttributionService(queryRepo, documentRepo)
 	
-	documentService := service.NewDocumentService(documentRepo, siteRepo, llmService)
+	documentService := service.NewDocumentService(documentRepo, siteRepo, actionRepo, llmService)
 	queryService := service.NewQueryService(queryRepo, actionRepo, documentRepo, componentRepo, llmService, contentFilterService, sourceAttributionService)
 
 	// Initialize Fiber app

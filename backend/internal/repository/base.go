@@ -55,17 +55,13 @@ func (r *BaseRepository) ApplyFilters(query *gorm.DB, filters map[string]interfa
 			if siteID, ok := value.(uuid.UUID); ok {
 				query = query.Where("site_id = ?", siteID)
 			}
-		case "component_type":
-			if componentType, ok := value.(string); ok && componentType != "" {
-				query = query.Where("component_type = ?", componentType)
+		case "action_type":
+			if actionType, ok := value.(string); ok && actionType != "" {
+				query = query.Where("action_type = ?", actionType)
 			}
 		case "document_type":
 			if docType, ok := value.(string); ok && docType != "" {
 				query = query.Where("document_type = ?", docType)
-			}
-		case "action_type":
-			if actionType, ok := value.(string); ok && actionType != "" {
-				query = query.Where("action_type = ?", actionType)
 			}
 		case "status":
 			if status, ok := value.(string); ok && status != "" {

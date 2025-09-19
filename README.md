@@ -14,7 +14,7 @@
 
 </div>
 
-## 🚀 Quick Start
+##  Quick Start
 
 Get EngramIQ running in under 2 minutes:
 
@@ -33,23 +33,7 @@ make quickstart
 
 **That's it!** Visit [http://localhost:3000](http://localhost:3000) to access EngramIQ.
 
-## 📋 What is EngramIQ?
-
-EngramIQ is an AI-powered solar asset management platform that:
-
-- **Processes Documents**: Upload PDFs, emails, and meeting transcripts
-- **Extracts Actions**: Automatically identifies maintenance activities and relates them to specific components
-- **Enables Queries**: Ask questions in natural language and get accurate, source-backed answers
-- **Prevents Hallucinations**: All responses are grounded in your actual documents
-- **Provides Citations**: Every answer includes links to source material
-
-### 🎯 Perfect for Solar Asset Managers who need to:
-- Reduce manual data compilation from 50% to <5% of daily work
-- Quickly find maintenance history for specific components
-- Generate reports from unstructured field service data
-- Query site information using natural language
-
-## 🏗️ Architecture
+##  Architecture
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
@@ -72,7 +56,7 @@ EngramIQ is an AI-powered solar asset management platform that:
                         └─────────────────┘
 ```
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ### Frontend
 - **Next.js 14** - React framework with App Router
@@ -97,7 +81,7 @@ EngramIQ is an AI-powered solar asset management platform that:
 - **Nginx** - Reverse proxy (production)
 - **GitHub Actions** - CI/CD pipeline
 
-## 📖 Usage Guide
+##  Usage Guide
 
 ### 1. Upload Documents
 ```bash
@@ -115,23 +99,23 @@ EngramIQ is an AI-powered solar asset management platform that:
 
 ### 3. Get Sourced Answers
 ```
-✅ Maintenance performed on INV001:
+ Maintenance performed on INV001:
    - Quarterly inspection on March 15th [Source: Service Report]
    - DC disconnect replacement on March 22nd [Source: Work Order #1234]
    
-📊 Confidence: 94%
-🔗 Sources: Field Service Report - March 2024, Work Order #1234
+ Confidence: 94%
+ Sources: Field Service Report - March 2024, Work Order #1234
 ```
 
-## 🚀 Deployment Options
+##  Deployment Options
 
 ### Option 1: Quick Development (Recommended)
 ```bash
 make dev  # Starts all services with Docker Compose
 ```
-- ✅ Database migrations run automatically
-- ✅ Sample data pre-loaded (Site S2367 with 36 inverters)
-- ✅ All services with hot reloading
+-  Database migrations run automatically
+-  Sample data pre-loaded (Site S2367 with 36 inverters)
+-  All services with hot reloading
 
 ### Option 2: Production Build
 ```bash
@@ -153,7 +137,7 @@ docker-compose up nginx
 # API: http://localhost/api/
 ```
 
-## 🔧 Configuration
+##  Configuration
 
 ### Environment Variables
 ```bash
@@ -177,36 +161,36 @@ make clean         # Clean all caches and builds
 make test          # Run test suite
 ```
 
-## 📊 Features
+##  Features
 
-### ✅ Document Processing
+###  Document Processing
 - Multi-format file upload (PDF, DOCX, emails)
 - Automatic text extraction and processing
 - AI-powered action extraction
 - Component relationship mapping
 - Deduplication and versioning
 
-### ✅ Natural Language Queries
+###  Natural Language Queries
 - Conversational AI interface
 - Source attribution for all answers
 - Confidence scoring
 - Hallucination prevention
 - Professional behavior guards
 
-### ✅ Site Management
+###  Site Management
 - Component status monitoring
 - Timeline view of activities
 - Performance metrics dashboard
 - Alert and notification system
 
-### ✅ Security & Compliance
+###  Security & Compliance
 - JWT authentication ready
 - Role-based access control
 - Data encryption at rest and in transit
 - GDPR compliance features
 - Audit logging
 
-## 🔒 Security
+##  Security
 
 - **Authentication**: JWT tokens with refresh mechanism
 - **Authorization**: Role-based access control
@@ -214,14 +198,14 @@ make test          # Run test suite
 - **Input Validation**: Comprehensive sanitization
 - **Rate Limiting**: API endpoint protection
 
-## 📈 Performance
+##  Performance
 
 - **Response Time**: <2s for most queries
 - **Throughput**: 1000+ concurrent users
 - **Storage**: Efficient vector indexing
 - **Caching**: Multi-layer caching strategy
 
-## 🐳 Docker Support
+##  Docker Support
 
 Full Docker Compose setup includes:
 - Frontend (Next.js)
@@ -231,28 +215,11 @@ Full Docker Compose setup includes:
 - Nginx reverse proxy
 - PgAdmin for database management
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests and documentation
-5. Submit a pull request
-
-## 📝 API Documentation
-
-### Key Endpoints
-```
-GET    /api/v1/sites                    # List sites
-POST   /api/v1/sites/{id}/documents     # Upload document
-POST   /api/v1/sites/{id}/queries       # Natural language query
-GET    /api/v1/sites/{id}/timeline      # Site events
-GET    /api/v1/sites/{id}/components    # Components list
 ```
 
 Full API documentation available at `http://localhost:8080/swagger/`
 
-## 🔍 Monitoring
+## Monitoring
 
 ### Health Checks
 ```bash
@@ -274,7 +241,7 @@ make db-shell          # PostgreSQL shell
 # PgAdmin: http://localhost:5050 (admin@engramiq.dev / admin123)
 ```
 
-## 🚨 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -300,23 +267,3 @@ npm install && npm run dev
 # Edit .env file with your OpenAI API key
 LLM_API_KEY=sk-...
 ```
-
-## 📧 Support
-
-- **Documentation**: [Internal docs](./docs/)
-- **Issues**: GitHub Issues
-- **Email**: support@engramiq.com
-
-## 📄 License
-
-Copyright © 2024 EngramIQ. All rights reserved.
-
----
-
-<div align="center">
-
-**Ready to transform your solar asset management?**
-
-[Get Started](#-quick-start) • [View Demo](http://localhost:3000) • [Read Docs](./docs/)
-
-</div>

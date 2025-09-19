@@ -30,8 +30,7 @@ export default function HomePage() {
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [actions, setActions] = useState([]);
 
-  // Default site ID (S2367 from the backend)
-  const siteId = 'site-s2367'; // This would come from routing or auth in a real app
+  // Site ID will be loaded from the backend API response
 
   const loadData = async () => {
     try {
@@ -72,7 +71,10 @@ export default function HomePage() {
       const [componentsRes, documentsRes, timelineRes] = await Promise.allSettled([
         componentAPI.getComponents(siteId),
         documentAPI.getDocuments(siteId),
-        timelineAPI.getTimeline(siteId)
+        timelineAPI.getTimeline(siteId, {
+          startDate: '2024-01-01',
+          endDate: '2025-12-31'
+        })
       ]);
 
       // Handle components

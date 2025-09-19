@@ -252,6 +252,7 @@ REMEMBER: Return ONLY the JSON, nothing else.`, componentContext, content)
 	// Parse the JSON response
 	responseContent := openAIResp.Choices[0].Message.Content
 	fmt.Printf("LLM ExtractActions Response: %s\n", responseContent)
+	fmt.Printf("DEBUG: Response length: %d\n", len(responseContent))
 	
 	var extractionResult ActionExtractionResult
 	if err := json.Unmarshal([]byte(responseContent), &extractionResult); err != nil {
@@ -281,7 +282,8 @@ REMEMBER: Return ONLY the JSON, nothing else.`, componentContext, content)
 
 	// Convert to domain models
 	actions := make([]*domain.ExtractedAction, 0, len(extractionResult.Actions))
-	
+	fmt.Printf("DEBUG: Found %d actions in extraction result\n", len(extractionResult.Actions))
+
 	for _, result := range extractionResult.Actions {
 		actionDate, _ := time.Parse(time.RFC3339, result.ActionDate)
 		if actionDate.IsZero() {
@@ -301,6 +303,7 @@ REMEMBER: Return ONLY the JSON, nothing else.`, componentContext, content)
 			ID:                   uuid.New(),
 			SiteID:              siteID,
 			ActionType:          domain.ActionType(result.ActionType),
+			Title:               result.Description, // Set the required Title field
 			Description:         result.Description,
 			TechnicianNames:     result.TechnicianNames,
 			WorkOrderNumber:     result.WorkOrderNumber,
@@ -309,6 +312,7 @@ REMEMBER: Return ONLY the JSON, nothing else.`, componentContext, content)
 			ExtractionConfidence: result.ConfidenceScore,
 			ExtractionMetadata:  domain.JSON{"details": result.Details},
 			PrimaryComponentID:  primaryComponentID,
+			// Don't set Embedding - let GORM use database default (null)
 			CreatedAt:           time.Now(),
 			UpdatedAt:           time.Now(),
 		}
@@ -316,6 +320,7 @@ REMEMBER: Return ONLY the JSON, nothing else.`, componentContext, content)
 		actions = append(actions, action)
 	}
 
+	fmt.Printf("DEBUG: Returning %d actions from ExtractActions\n", len(actions))
 	return actions, nil
 }
 

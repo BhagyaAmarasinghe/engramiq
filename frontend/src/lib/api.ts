@@ -1,13 +1,30 @@
 import axios from 'axios';
-import { 
-  Site, 
-  Component, 
-  Document, 
-  UserQuery, 
-  QueryResponse, 
-  ExtractedAction, 
-  TimelineEvent 
+import {
+  Site,
+  Component,
+  Document,
+  UserQuery,
+  QueryResponse,
+  ExtractedAction,
+  TimelineEvent
 } from '@/types';
+
+// Type aliases for timeline events
+type EventType =
+  | 'maintenance_scheduled'
+  | 'maintenance_completed'
+  | 'fault_occurred'
+  | 'fault_cleared'
+  | 'replacement_scheduled'
+  | 'replacement_completed'
+  | 'inspection_scheduled'
+  | 'inspection_completed'
+  | 'warranty_claim'
+  | 'performance_alert'
+  | 'installation_completed'
+  | 'other';
+
+type EventPriority = 'low' | 'medium' | 'high' | 'critical';
 import { toCamelCase } from '@/lib/utils';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -234,10 +251,86 @@ export const timelineAPI = {
     limit?: number;
   }): Promise<{ data: TimelineEvent[] }> => {
     const response = await api.get(`/sites/${siteId}/timeline`, { params });
-    // Backend returns { actions: [...] }, but we need { data: [...] }
-    return { data: response.data.actions || [] };
+    // Backend returns { actions: [...] }, transform to TimelineEvent
+    const actions = response.data.actions || [];
+    const timelineEvents = actions.map(transformActionToTimelineEvent);
+    return { data: timelineEvents };
   },
 };
+
+// Transform ExtractedAction to TimelineEvent
+function transformActionToTimelineEvent(action: any): TimelineEvent {
+  // Map action types to event types
+  const getEventType = (actionType: string): EventType => {
+    switch (actionType.toLowerCase()) {
+      case 'maintenance':
+      case 'preventive_maintenance':
+      case 'corrective_maintenance':
+        return 'maintenance_completed';
+      case 'inspection':
+      case 'safety_check':
+        return 'inspection_completed';
+      case 'fault':
+      case 'error':
+      case 'alarm':
+        return 'fault_occurred';
+      case 'repair':
+      case 'replacement':
+        return 'replacement_completed';
+      case 'installation':
+      case 'commissioning':
+        return 'installation_completed';
+      case 'cleaning':
+        return 'maintenance_completed';
+      default:
+        return 'other';
+    }
+  };
+
+  // Map severity or importance to priority
+  const getPriority = (action: any): EventPriority => {
+    const severity = action.severity?.toLowerCase();
+    const importance = action.importance?.toLowerCase();
+    const priority = action.priority?.toLowerCase();
+
+    if (severity === 'critical' || importance === 'critical' || priority === 'critical') {
+      return 'critical';
+    }
+    if (severity === 'high' || importance === 'high' || priority === 'high') {
+      return 'high';
+    }
+    if (severity === 'medium' || importance === 'medium' || priority === 'medium') {
+      return 'medium';
+    }
+    return 'low';
+  };
+
+  return {
+    id: action.id || Math.random().toString(36).substr(2, 9),
+    siteId: action.site_id || '',
+    title: action.title || action.description || 'Action Event',
+    description: action.description || '',
+    eventType: getEventType(action.action_type || ''),
+    priority: getPriority(action),
+    startTime: action.action_date || action.created_at,
+    endTime: action.end_time || undefined,
+    durationMinutes: action.duration_minutes || 0,
+    affectedComponentIds: action.primary_component_id ? [action.primary_component_id] : [],
+    relatedDocumentId: action.document_id,
+    relatedActionId: action.id,
+    assignedTechnicians: action.technician_names || [],
+    responsibleUserId: undefined,
+    eventMetadata: {
+      documentId: action.document_id,
+      confidence: action.extraction_confidence,
+      workOrderNumber: action.work_order_number,
+      actionStatus: action.action_status,
+      ...action.extraction_metadata
+    },
+    createdAt: action.created_at,
+    updatedAt: action.updated_at
+  };
+}
 
 // Health check
 export const healthAPI = {

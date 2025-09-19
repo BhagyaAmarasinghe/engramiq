@@ -63,7 +63,7 @@ type ExtractedAction struct {
 	ExtractionConfidence float64              `json:"extraction_confidence"`
 	ExtractionModel      string               `json:"extraction_model" gorm:"type:varchar(50)"`
 	ExtractionMetadata   JSON                 `json:"extraction_metadata" gorm:"type:jsonb;default:'{}'"`
-	Embedding            pgvector.Vector      `json:"-" gorm:"type:vector(1536)"`
+	Embedding            pgvector.Vector      `json:"-" gorm:"type:vector(1536);default:null"`
 	CreatedAt            time.Time            `json:"created_at"`
 	UpdatedAt            time.Time            `json:"updated_at"`
 }

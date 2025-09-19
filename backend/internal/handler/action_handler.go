@@ -170,8 +170,8 @@ func (h *ActionHandler) GetActionTimeline(c *fiber.Ctx) error {
 	}
 
 	// Parse date range
-	startDateStr := c.Query("start_date")
-	endDateStr := c.Query("end_date")
+	startDateStr := c.Query("startDate")
+	endDateStr := c.Query("endDate")
 
 	// Default to last 30 days if not provided
 	endDate := time.Now()

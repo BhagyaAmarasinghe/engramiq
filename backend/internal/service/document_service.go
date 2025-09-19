@@ -32,20 +32,23 @@ type DocumentService interface {
 }
 
 type documentService struct {
-	docRepo    repository.DocumentRepository
-	siteRepo   repository.SiteRepository
-	llmService LLMService
+	docRepo      repository.DocumentRepository
+	siteRepo     repository.SiteRepository
+	actionRepo   repository.ActionRepository
+	llmService   LLMService
 }
 
 func NewDocumentService(
 	docRepo repository.DocumentRepository,
 	siteRepo repository.SiteRepository,
+	actionRepo repository.ActionRepository,
 	llmService LLMService,
 ) DocumentService {
 	return &documentService{
-		docRepo:    docRepo,
-		siteRepo:   siteRepo,
-		llmService: llmService,
+		docRepo:      docRepo,
+		siteRepo:     siteRepo,
+		actionRepo:   actionRepo,
+		llmService:   llmService,
 	}
 }
 
@@ -166,17 +169,35 @@ func (s *documentService) ProcessDocument(id uuid.UUID) error {
 	}
 
 	// Extract actions from document content
-	_, err = s.llmService.ExtractActions(document.ProcessedContent, document.SiteID)
+	actions, err := s.llmService.ExtractActions(document.ProcessedContent, document.SiteID)
 	if err != nil {
 		s.UpdateProcessingStatus(id, domain.ProcessingStatusFailed)
 		return fmt.Errorf("failed to extract actions: %w", err)
 	}
+
+	// Save extracted actions to database
+	extractedCount := 0
+	fmt.Printf("Attempting to save %d extracted actions\n", len(actions))
+	for i, action := range actions {
+		// Associate action with the document it came from
+		action.DocumentID = document.ID
+		fmt.Printf("Saving action %d: %s\n", i+1, action.Title)
+		if err := s.actionRepo.Create(action); err != nil {
+			fmt.Printf("Failed to save action %d: %v\n", i+1, err)
+			// Continue processing other actions even if one fails
+		} else {
+			fmt.Printf("Successfully saved action %d\n", i+1)
+			extractedCount++
+		}
+	}
+	fmt.Printf("Total actions saved: %d\n", extractedCount)
 
 	// Update document with processing results
 	updates := map[string]interface{}{
 		"embedding":           embedding,
 		"processing_status":   domain.ProcessingStatusCompleted,
 		"processing_completed_at": time.Now(),
+		// "extracted_actions_count": extractedCount, // Column doesn't exist in database
 	}
 
 	err = s.docRepo.Update(id, updates)
